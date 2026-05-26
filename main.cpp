@@ -11,6 +11,7 @@
 #include <string>
 using namespace std;
 
+// Guarda os dados de cada produto.
 struct Produto {
     int codigo;
     char nome[60];
@@ -21,6 +22,7 @@ struct Produto {
     char descricao[120];
 };
 
+// No da arvore AVL usada para buscar produtos por codigo.
 struct NoAVL {
     int codigo;
     int indice;
@@ -29,12 +31,14 @@ struct NoAVL {
     NoAVL* direita;
 };
 
+// Guarda nome, codigo e posicao para busca por nome.
 struct IndiceNome {
     string nome;
     int codigo;
     int indice;
 };
 
+// Guarda uma linha do relatorio de desempenho.
 struct ResultadoDesempenho {
     string operacao;
     string algoritmo;
@@ -43,30 +47,37 @@ struct ResultadoDesempenho {
     long long tempoTotal;
 };
 
+// Nome do arquivo binario onde os produtos sao salvos.
 const string ARQUIVO = "produtos.dat";
 
+// Limpa o enter que fica no buffer depois do cin.
 void limparBuffer() {
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
 }
 
+// Copia uma string para um campo char com limite de tamanho.
 void copiarTexto(char destino[], int tamanho, const string& texto) {
     strncpy(destino, texto.c_str(), tamanho - 1);
     destino[tamanho - 1] = '\0';
 }
 
+// Transforma texto para minusculo para facilitar comparacoes.
 string minusculo(string s) {
     transform(s.begin(), s.end(), s.begin(), [](unsigned char c){ return tolower(c); });
     return s;
 }
 
+// Retorna a altura de um no da AVL.
 int altura(NoAVL* no) {
     return no ? no->altura : 0;
 }
 
+// Calcula o fator de balanceamento da AVL.
 int fatorBalanceamento(NoAVL* no) {
     return no ? altura(no->esquerda) - altura(no->direita) : 0;
 }
 
+// Faz rotacao para a direita na AVL.
 NoAVL* rotacaoDireita(NoAVL* y) {
     NoAVL* x = y->esquerda;
     NoAVL* t2 = x->direita;
@@ -80,6 +91,7 @@ NoAVL* rotacaoDireita(NoAVL* y) {
     return x;
 }
 
+// Faz rotacao para a esquerda na AVL.
 NoAVL* rotacaoEsquerda(NoAVL* x) {
     NoAVL* y = x->direita;
     NoAVL* t2 = y->esquerda;
@@ -93,6 +105,7 @@ NoAVL* rotacaoEsquerda(NoAVL* x) {
     return y;
 }
 
+// Insere codigo e indice do produto na arvore AVL.
 NoAVL* inserirAVL(NoAVL* raiz, int codigo, int indice) {
     if (!raiz) {
         return new NoAVL{codigo, indice, 1, nullptr, nullptr};
@@ -131,6 +144,7 @@ NoAVL* inserirAVL(NoAVL* raiz, int codigo, int indice) {
     return raiz;
 }
 
+// Busca um codigo na AVL e retorna a posicao do produto.
 int buscarIndiceAVL(NoAVL* raiz, int codigo) {
     while (raiz) {
         if (codigo == raiz->codigo) return raiz->indice;
@@ -141,6 +155,7 @@ int buscarIndiceAVL(NoAVL* raiz, int codigo) {
     return -1;
 }
 
+// Libera da memoria todos os nos da AVL.
 void liberarAVL(NoAVL* raiz) {
     if (!raiz) return;
     liberarAVL(raiz->esquerda);
@@ -148,6 +163,7 @@ void liberarAVL(NoAVL* raiz) {
     delete raiz;
 }
 
+// Monta a AVL com base no vector de produtos.
 NoAVL* construirIndiceAVL(const vector<Produto>& produtos) {
     NoAVL* raiz = nullptr;
 
@@ -158,20 +174,24 @@ NoAVL* construirIndiceAVL(const vector<Produto>& produtos) {
     return raiz;
 }
 
+// Recria a AVL apos cadastro, edicao ou remocao.
 void reconstruirIndiceAVL(NoAVL*& raiz, const vector<Produto>& produtos) {
     liberarAVL(raiz);
     raiz = construirIndiceAVL(produtos);
 }
 
+// Verifica se o codigo ja esta cadastrado.
 bool codigoDisponivel(NoAVL* indiceAVL, int codigo, int indiceAtual = -1) {
     int indiceEncontrado = buscarIndiceAVL(indiceAVL, codigo);
     return indiceEncontrado == -1 || indiceEncontrado == indiceAtual;
 }
 
+// Confere se um texto comeca com o prefixo informado.
 bool iniciaCom(const string& texto, const string& prefixo) {
     return texto.size() >= prefixo.size() && texto.compare(0, prefixo.size(), prefixo) == 0;
 }
 
+// Cria um indice ordenado por nome para busca binaria.
 vector<IndiceNome> construirIndiceNomeOrdenado(const vector<Produto>& produtos) {
     vector<IndiceNome> indice;
 
@@ -187,6 +207,7 @@ vector<IndiceNome> construirIndiceNomeOrdenado(const vector<Produto>& produtos) 
     return indice;
 }
 
+// Encontra a primeira posicao possivel na busca por nome.
 int buscaBinariaPrimeiroNome(const vector<IndiceNome>& indice, const string& busca) {
     int esquerda = 0;
     int direita = (int)indice.size() - 1;
@@ -206,6 +227,7 @@ int buscaBinariaPrimeiroNome(const vector<IndiceNome>& indice, const string& bus
     return resultado;
 }
 
+// Carrega os produtos gravados no arquivo binario.
 vector<Produto> carregarProdutos() {
     vector<Produto> produtos;
     ifstream arquivo(ARQUIVO, ios::binary);
@@ -220,6 +242,7 @@ vector<Produto> carregarProdutos() {
     return produtos;
 }
 
+// Salva todos os produtos no arquivo binario.
 void salvarProdutos(const vector<Produto>& produtos) {
     ofstream arquivo(ARQUIVO, ios::binary | ios::trunc);
 
@@ -228,6 +251,7 @@ void salvarProdutos(const vector<Produto>& produtos) {
     }
 }
 
+// Mostra todas as informacoes de um produto.
 void mostrarProduto(const Produto& p) {
     cout << "----------------------------------------\n";
     cout << "Codigo: " << p.codigo << "\n";
@@ -240,6 +264,7 @@ void mostrarProduto(const Produto& p) {
     cout << "Descricao: " << p.descricao << "\n";
 }
 
+// Cadastra um produto novo e grava no arquivo.
 void cadastrarProduto(vector<Produto>& produtos, NoAVL* indiceAVL) {
     Produto p{};
     string texto;
@@ -280,6 +305,7 @@ void cadastrarProduto(vector<Produto>& produtos, NoAVL* indiceAVL) {
     cout << "Produto cadastrado com sucesso!\n";
 }
 
+// Lista todos os produtos cadastrados.
 void listarProdutos(const vector<Produto>& produtos) {
     if (produtos.empty()) {
         cout << "Nenhum produto cadastrado.\n";
@@ -291,6 +317,7 @@ void listarProdutos(const vector<Produto>& produtos) {
     }
 }
 
+// Edita o codigo do produto.
 bool editarCodigo(vector<Produto>& produtos, NoAVL* indiceAVL, int pos) {
     int novoCodigo;
 
@@ -306,6 +333,7 @@ bool editarCodigo(vector<Produto>& produtos, NoAVL* indiceAVL, int pos) {
     return true;
 }
 
+// Edita o nome do produto.
 bool editarNome(Produto& produto) {
     string texto;
 
@@ -316,6 +344,7 @@ bool editarNome(Produto& produto) {
     return true;
 }
 
+// Edita a categoria do produto.
 bool editarCategoria(Produto& produto) {
     string texto;
 
@@ -326,24 +355,28 @@ bool editarCategoria(Produto& produto) {
     return true;
 }
 
+// Edita o preco do produto.
 bool editarPreco(Produto& produto) {
     cout << "Novo preco: ";
     cin >> produto.preco;
     return true;
 }
 
+// Edita a quantidade em estoque.
 bool editarEstoque(Produto& produto) {
     cout << "Novo estoque: ";
     cin >> produto.estoque;
     return true;
 }
 
+// Edita a avaliacao do produto.
 bool editarAvaliacao(Produto& produto) {
     cout << "Nova avaliacao de 0 a 5: ";
     cin >> produto.avaliacao;
     return true;
 }
 
+// Edita a descricao do produto.
 bool editarDescricao(Produto& produto) {
     string texto;
 
@@ -354,6 +387,7 @@ bool editarDescricao(Produto& produto) {
     return true;
 }
 
+// Edita todos os campos do produto.
 bool editarTodasInformacoes(vector<Produto>& produtos, NoAVL* indiceAVL, int pos) {
     Produto& produto = produtos[pos];
     string texto;
@@ -395,6 +429,7 @@ bool editarTodasInformacoes(vector<Produto>& produtos, NoAVL* indiceAVL, int pos
     return true;
 }
 
+// Mostra o menu de edicao de um produto.
 void editarInformacoes(vector<Produto>& produtos, NoAVL* indiceAVL) {
     int codigo;
     int opcao;
@@ -449,6 +484,7 @@ void editarInformacoes(vector<Produto>& produtos, NoAVL* indiceAVL) {
     }
 }
 
+// Remove todos os produtos do sistema.
 void limparProdutos(vector<Produto>& produtos) {
     char confirmacao;
 
@@ -469,6 +505,39 @@ void limparProdutos(vector<Produto>& produtos) {
     }
 }
 
+// Remove apenas um produto escolhido pelo codigo.
+void removerProduto(vector<Produto>& produtos, NoAVL* indiceAVL) {
+    int codigo;
+    char confirmacao;
+
+    if (produtos.empty()) {
+        cout << "Nenhum produto cadastrado para remover.\n";
+        return;
+    }
+
+    cout << "Codigo do produto para remover: ";
+    cin >> codigo;
+
+    int pos = buscarIndiceAVL(indiceAVL, codigo);
+    if (pos == -1) {
+        cout << "Produto nao encontrado.\n";
+        return;
+    }
+
+    mostrarProduto(produtos[pos]);
+    cout << "Confirma remover este produto? (s/n): ";
+    cin >> confirmacao;
+
+    if (confirmacao == 's' || confirmacao == 'S') {
+        produtos.erase(produtos.begin() + pos);
+        salvarProdutos(produtos);
+        cout << "Produto removido com sucesso!\n";
+    } else {
+        cout << "Operacao cancelada.\n";
+    }
+}
+
+// Busca produtos pelo inicio do nome.
 void buscarPorNome(const vector<Produto>& produtos) {
     string busca;
     bool encontrou = false;
@@ -506,6 +575,7 @@ void buscarPorNome(const vector<Produto>& produtos) {
     cout << "Tempo da busca binaria: " << tempo << " microssegundos.\n";
 }
 
+// Filtra produtos por categoria.
 void filtrarCategoria(const vector<Produto>& produtos) {
     string categoria;
     bool encontrou = false;
@@ -525,6 +595,7 @@ void filtrarCategoria(const vector<Produto>& produtos) {
     if (!encontrou) cout << "Nenhum produto nessa categoria.\n";
 }
 
+// Filtra produtos por faixa de preco.
 void filtrarPreco(const vector<Produto>& produtos) {
     double minPreco, maxPreco;
     bool encontrou = false;
@@ -544,6 +615,7 @@ void filtrarPreco(const vector<Produto>& produtos) {
     if (!encontrou) cout << "Nenhum produto nessa faixa de preco.\n";
 }
 
+// Ordena produtos por preco usando QuickSort.
 void quickSortPreco(vector<Produto>& v, int inicio, int fim) {
     if (inicio >= fim) return;
 
@@ -565,6 +637,7 @@ void quickSortPreco(vector<Produto>& v, int inicio, int fim) {
     quickSortPreco(v, i, fim);
 }
 
+// Ordena produtos por avaliacao usando QuickSort.
 void quickSortAvaliacao(vector<Produto>& v, int inicio, int fim) {
     if (inicio >= fim) return;
 
@@ -586,6 +659,7 @@ void quickSortAvaliacao(vector<Produto>& v, int inicio, int fim) {
     quickSortAvaliacao(v, i, fim);
 }
 
+// Mostra uma copia dos produtos ordenada por preco.
 void ordenarPorPreco(const vector<Produto>& produtos) {
     vector<Produto> copia = produtos;
 
@@ -599,6 +673,7 @@ void ordenarPorPreco(const vector<Produto>& produtos) {
     cout << "Tempo da ordenacao por preco: " << tempo << " microssegundos.\n";
 }
 
+// Mostra os cinco produtos com maior avaliacao.
 void rankingAvaliacao(const vector<Produto>& produtos) {
     vector<Produto> copia = produtos;
 
@@ -618,6 +693,7 @@ void rankingAvaliacao(const vector<Produto>& produtos) {
     cout << "Tempo da ordenacao do ranking: " << tempo << " microssegundos.\n";
 }
 
+// Imprime uma linha resumida do ranking.
 void imprimirProdutoResumo(const Produto& p, int posicao) {
     cout << left << setw(5) << posicao
          << setw(10) << p.codigo
@@ -628,6 +704,7 @@ void imprimirProdutoResumo(const Produto& p, int posicao) {
          << setw(12) << p.avaliacao << "\n";
 }
 
+// Imprime o cabecalho da tabela de ranking.
 void imprimirCabecalhoRanking() {
     cout << left << setw(5) << "#"
          << setw(10) << "Codigo"
@@ -639,6 +716,7 @@ void imprimirCabecalhoRanking() {
     cout << string(89, '-') << "\n";
 }
 
+// Gera ranking geral por avaliacao, estoque e preco.
 void gerarRankingProdutos(const vector<Produto>& produtos) {
     vector<Produto> ranking = produtos;
 
@@ -658,6 +736,7 @@ void gerarRankingProdutos(const vector<Produto>& produtos) {
     }
 }
 
+// Adiciona uma medicao ao relatorio de desempenho.
 void adicionarResultado(vector<ResultadoDesempenho>& resultados, const string& operacao,
                         const string& algoritmo, int encontrados, int repeticoes,
                         chrono::high_resolution_clock::time_point inicio,
@@ -666,6 +745,7 @@ void adicionarResultado(vector<ResultadoDesempenho>& resultados, const string& o
     resultados.push_back({operacao, algoritmo, encontrados, repeticoes, tempo});
 }
 
+// Imprime o relatorio comparativo de desempenho.
 void imprimirRelatorioDesempenho(const vector<ResultadoDesempenho>& resultados) {
     cout << "\n===== RELATORIO COMPARATIVO DE DESEMPENHO =====\n";
     cout << left << setw(28) << "Operacao"
@@ -688,6 +768,7 @@ void imprimirRelatorioDesempenho(const vector<ResultadoDesempenho>& resultados) 
     }
 }
 
+// Gera ranking e compara tempos de busca e ordenacao.
 void gerarRankingERelatorio(const vector<Produto>& produtos, NoAVL* indiceAVL) {
     if (produtos.empty()) {
         cout << "Nenhum produto cadastrado para gerar ranking e relatorio.\n";
@@ -853,6 +934,7 @@ void gerarRankingERelatorio(const vector<Produto>& produtos, NoAVL* indiceAVL) {
     cout << "Consultas usam o ultimo produto cadastrado como referencia.\n";
 }
 
+// Controla o menu principal do sistema.
 void menu() {
     vector<Produto> produtos = carregarProdutos();
     NoAVL* indiceAVL = construirIndiceAVL(produtos);
@@ -871,7 +953,8 @@ void menu() {
         cout << "7 - Editar informacoes\n";
         cout << "8 - Ranking por avaliacao\n";
         cout << "9 - Ranking e relatorio de desempenho\n";
-        cout << "10 - Limpar produtos\n";
+        cout << "10 - Remover produto\n";
+        cout << "11 - Limpar todos os produtos\n";
         cout << "0 - Sair\n";
         cout << "Escolha: ";
         cin >> opcao;
@@ -893,6 +976,10 @@ void menu() {
             case 8: rankingAvaliacao(produtos); break;
             case 9: gerarRankingERelatorio(produtos, indiceAVL); break;
             case 10:
+                removerProduto(produtos, indiceAVL);
+                reconstruirIndiceAVL(indiceAVL, produtos);
+                break;
+            case 11:
                 limparProdutos(produtos);
                 reconstruirIndiceAVL(indiceAVL, produtos);
                 break;
@@ -906,6 +993,7 @@ void menu() {
     liberarAVL(indiceAVL);
 }
 
+// Inicia o programa.
 int main() {
     menu();
     return 0;
