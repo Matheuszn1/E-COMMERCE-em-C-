@@ -9,6 +9,7 @@
 #include <limits>
 #include <chrono>
 #include <string>
+#include <sstream>
 using namespace std;
 
 // Guarda os dados de cada produto.
@@ -65,6 +66,41 @@ void copiarTexto(char destino[], int tamanho, const string& texto) {
 string minusculo(string s) {
     transform(s.begin(), s.end(), s.begin(), [](unsigned char c){ return tolower(c); });
     return s;
+}
+
+// Le um numero inteiro e evita que entradas invalidas travem o cin.
+void lerInteiro(const string& mensagem, int& valor) {
+    string entrada;
+
+    while (true) {
+        cout << mensagem;
+        getline(cin >> ws, entrada);
+
+        stringstream ss(entrada);
+        if (ss >> valor && (ss >> ws).eof()) {
+            return;
+        }
+
+        cout << "Valor invalido. Digite apenas numeros inteiros.\n";
+    }
+}
+
+// Le um numero decimal, aceitando ponto ou virgula como separador.
+void lerDecimal(const string& mensagem, double& valor) {
+    string entrada;
+
+    while (true) {
+        cout << mensagem;
+        getline(cin >> ws, entrada);
+        replace(entrada.begin(), entrada.end(), ',', '.');
+
+        stringstream ss(entrada);
+        if (ss >> valor && (ss >> ws).eof()) {
+            return;
+        }
+
+        cout << "Valor invalido. Digite apenas numeros. Exemplo: 19.90 ou 19,90.\n";
+    }
 }
 
 // Retorna a altura de um no da AVL.
@@ -191,6 +227,65 @@ bool iniciaCom(const string& texto, const string& prefixo) {
     return texto.size() >= prefixo.size() && texto.compare(0, prefixo.size(), prefixo) == 0;
 }
 
+// Calcula quantas alteracoes sao necessarias para transformar um texto no outro.
+int distanciaLevenshtein(const string& a, const string& b) {
+    vector<int> anterior(b.size() + 1);
+    vector<int> atual(b.size() + 1);
+
+    for (int j = 0; j <= (int)b.size(); j++) {
+        anterior[j] = j;
+    }
+
+    for (int i = 1; i <= (int)a.size(); i++) {
+        atual[0] = i;
+
+        for (int j = 1; j <= (int)b.size(); j++) {
+            int custo = a[i - 1] == b[j - 1] ? 0 : 1;
+            atual[j] = min({
+                anterior[j] + 1,
+                atual[j - 1] + 1,
+                anterior[j - 1] + custo
+            });
+        }
+
+        anterior = atual;
+    }
+
+    return anterior[b.size()];
+}
+
+// Define a tolerancia de erros conforme o tamanho do texto digitado.
+int limiteErrosBusca(const string& busca) {
+    if (busca.size() <= 2) return 0;
+    if (busca.size() <= 5) return 1;
+    if (busca.size() <= 9) return 2;
+    return 3;
+}
+
+// Verifica se o nome do produto combina com a busca mesmo com pequenos erros.
+bool nomeCombinaComErro(const string& nome, const string& busca) {
+    if (iniciaCom(nome, busca)) return true;
+
+    int limiteErros = limiteErrosBusca(busca);
+    string inicioNome = nome.substr(0, min(nome.size(), busca.size()));
+
+    if (distanciaLevenshtein(inicioNome, busca) <= limiteErros) return true;
+    if (distanciaLevenshtein(nome, busca) <= limiteErros) return true;
+
+    stringstream palavras(nome);
+    string palavra;
+
+    while (palavras >> palavra) {
+        string inicioPalavra = palavra.substr(0, min(palavra.size(), busca.size()));
+
+        if (iniciaCom(palavra, busca)) return true;
+        if (distanciaLevenshtein(inicioPalavra, busca) <= limiteErros) return true;
+        if (distanciaLevenshtein(palavra, busca) <= limiteErros) return true;
+    }
+
+    return false;
+}
+
 // Cria um indice ordenado por nome para busca binaria.
 vector<IndiceNome> construirIndiceNomeOrdenado(const vector<Produto>& produtos) {
     vector<IndiceNome> indice;
@@ -269,9 +364,7 @@ void cadastrarProduto(vector<Produto>& produtos, NoAVL* indiceAVL) {
     Produto p{};
     string texto;
 
-    cout << "Codigo do produto: ";
-    cin >> p.codigo;
-    limparBuffer();
+    lerInteiro("Codigo do produto: ", p.codigo);
 
     if (!codigoDisponivel(indiceAVL, p.codigo)) {
         cout << "Erro: ja existe produto com esse codigo.\n";
@@ -286,15 +379,11 @@ void cadastrarProduto(vector<Produto>& produtos, NoAVL* indiceAVL) {
     getline(cin, texto);
     copiarTexto(p.categoria, 40, texto);
 
-    cout << "Preco: ";
-    cin >> p.preco;
+    lerDecimal("Preco: ", p.preco);
 
-    cout << "Quantidade em estoque: ";
-    cin >> p.estoque;
+    lerInteiro("Quantidade em estoque: ", p.estoque);
 
-    cout << "Avaliacao de 0 a 5: ";
-    cin >> p.avaliacao;
-    limparBuffer();
+    lerDecimal("Avaliacao de 0 a 5: ", p.avaliacao);
 
     cout << "Descricao resumida: ";
     getline(cin, texto);
@@ -321,8 +410,7 @@ void listarProdutos(const vector<Produto>& produtos) {
 bool editarCodigo(vector<Produto>& produtos, NoAVL* indiceAVL, int pos) {
     int novoCodigo;
 
-    cout << "Novo codigo: ";
-    cin >> novoCodigo;
+    lerInteiro("Novo codigo: ", novoCodigo);
 
     if (!codigoDisponivel(indiceAVL, novoCodigo, pos)) {
         cout << "Erro: ja existe produto com esse codigo.\n";
@@ -357,22 +445,19 @@ bool editarCategoria(Produto& produto) {
 
 // Edita o preco do produto.
 bool editarPreco(Produto& produto) {
-    cout << "Novo preco: ";
-    cin >> produto.preco;
+    lerDecimal("Novo preco: ", produto.preco);
     return true;
 }
 
 // Edita a quantidade em estoque.
 bool editarEstoque(Produto& produto) {
-    cout << "Novo estoque: ";
-    cin >> produto.estoque;
+    lerInteiro("Novo estoque: ", produto.estoque);
     return true;
 }
 
 // Edita a avaliacao do produto.
 bool editarAvaliacao(Produto& produto) {
-    cout << "Nova avaliacao de 0 a 5: ";
-    cin >> produto.avaliacao;
+    lerDecimal("Nova avaliacao de 0 a 5: ", produto.avaliacao);
     return true;
 }
 
@@ -393,8 +478,7 @@ bool editarTodasInformacoes(vector<Produto>& produtos, NoAVL* indiceAVL, int pos
     string texto;
     int novoCodigo;
 
-    cout << "Novo codigo: ";
-    cin >> novoCodigo;
+    lerInteiro("Novo codigo: ", novoCodigo);
 
     if (!codigoDisponivel(indiceAVL, novoCodigo, pos)) {
         cout << "Erro: ja existe produto com esse codigo.\n";
@@ -412,15 +496,11 @@ bool editarTodasInformacoes(vector<Produto>& produtos, NoAVL* indiceAVL, int pos
     getline(cin, texto);
     copiarTexto(produto.categoria, 40, texto);
 
-    cout << "Novo preco: ";
-    cin >> produto.preco;
+    lerDecimal("Novo preco: ", produto.preco);
 
-    cout << "Novo estoque: ";
-    cin >> produto.estoque;
+    lerInteiro("Novo estoque: ", produto.estoque);
 
-    cout << "Nova avaliacao de 0 a 5: ";
-    cin >> produto.avaliacao;
-    limparBuffer();
+    lerDecimal("Nova avaliacao de 0 a 5: ", produto.avaliacao);
 
     cout << "Nova descricao resumida: ";
     getline(cin, texto);
@@ -440,8 +520,7 @@ void editarInformacoes(vector<Produto>& produtos, NoAVL* indiceAVL) {
         return;
     }
 
-    cout << "Codigo do produto para editar: ";
-    cin >> codigo;
+    lerInteiro("Codigo do produto para editar: ", codigo);
 
     int pos = buscarIndiceAVL(indiceAVL, codigo);
     if (pos == -1) {
@@ -461,8 +540,7 @@ void editarInformacoes(vector<Produto>& produtos, NoAVL* indiceAVL) {
         cout << "7 - Descricao\n";
         cout << "8 - Editar todas as informacoes\n";
         cout << "0 - Voltar\n";
-        cout << "Escolha: ";
-        cin >> opcao;
+        lerInteiro("Escolha: ", opcao);
 
         switch (opcao) {
             case 1: alterou = editarCodigo(produtos, indiceAVL, pos) || alterou; break;
@@ -515,8 +593,7 @@ void removerProduto(vector<Produto>& produtos, NoAVL* indiceAVL) {
         return;
     }
 
-    cout << "Codigo do produto para remover: ";
-    cin >> codigo;
+    lerInteiro("Codigo do produto para remover: ", codigo);
 
     int pos = buscarIndiceAVL(indiceAVL, codigo);
     if (pos == -1) {
@@ -537,17 +614,17 @@ void removerProduto(vector<Produto>& produtos, NoAVL* indiceAVL) {
     }
 }
 
-// Busca produtos pelo inicio do nome.
+// Busca produtos pelo nome, aceitando pequenos erros de digitacao.
 void buscarPorNome(const vector<Produto>& produtos) {
     string busca;
     bool encontrou = false;
+    bool usouBuscaAproximada = false;
 
     if (produtos.empty()) {
         cout << "Nenhum produto cadastrado.\n";
         return;
     }
 
-    limparBuffer();
     cout << "Digite o inicio do nome: ";
     getline(cin, busca);
     busca = minusculo(busca);
@@ -568,11 +645,24 @@ void buscarPorNome(const vector<Produto>& produtos) {
         posIndice++;
     }
 
+    if (!encontrou) {
+        usouBuscaAproximada = true;
+
+        for (const Produto& p : produtos) {
+            if (nomeCombinaComErro(minusculo(p.nome), busca)) {
+                mostrarProduto(p);
+                encontrou = true;
+            }
+        }
+    }
+
     auto fim = chrono::high_resolution_clock::now();
     auto tempo = chrono::duration_cast<chrono::microseconds>(fim - inicio).count();
 
     if (!encontrou) cout << "Nenhum produto encontrado.\n";
-    cout << "Tempo da busca binaria: " << tempo << " microssegundos.\n";
+    cout << "Tempo da busca "
+         << (usouBuscaAproximada ? "aproximada" : "binaria")
+         << ": " << tempo << " microssegundos.\n";
 }
 
 // Filtra produtos por categoria.
@@ -600,10 +690,8 @@ void filtrarPreco(const vector<Produto>& produtos) {
     double minPreco, maxPreco;
     bool encontrou = false;
 
-    cout << "Preco minimo: ";
-    cin >> minPreco;
-    cout << "Preco maximo: ";
-    cin >> maxPreco;
+    lerDecimal("Preco minimo: ", minPreco);
+    lerDecimal("Preco maximo: ", maxPreco);
 
     for (const Produto& p : produtos) {
         if (p.preco >= minPreco && p.preco <= maxPreco) {
@@ -956,8 +1044,7 @@ void menu() {
         cout << "10 - Remover produto\n";
         cout << "11 - Limpar todos os produtos\n";
         cout << "0 - Sair\n";
-        cout << "Escolha: ";
-        cin >> opcao;
+        lerInteiro("Escolha: ", opcao);
 
         switch (opcao) {
             case 1:
